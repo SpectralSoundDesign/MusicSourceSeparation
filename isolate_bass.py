@@ -32,29 +32,36 @@ def enhance_bass_torch(audio):
     
     # Create frequency masks
     freq_resolution = 44100 / n_fft
-    freqs = torch.linspace(0, 44100 / 2, num_freqs).to(audio.device)
+    freqs = torch.linspace(0, 44100/2, num_freqs).to(audio.device)
     
-    # Define frequency bands for bass components
-    sub_mask = (freqs <= 30).float()           # Sub-bass (20-30 Hz)
-    bass_mask = ((freqs > 30) & (freqs <= 250)).float()  # Bass (30-250 Hz)
+    # Define frequency bands for bass components - more conservative ranges
+    sub_bass_mask = (freqs <= 60).float()
+    bass_fundamental_mask = ((freqs > 60) & (freqs <= 250)).float()
+    bass_harmonic_mask = ((freqs > 250) & (freqs <= 500)).float()
+    upper_freq_mask = (freqs > 500).float()
 
     # Process magnitudes
     spec_mag = torch.abs(spec)
     spec_phase = torch.angle(spec)
     
     # Reshape masks for broadcasting
-    sub_mask = sub_mask.view(1, -1, 1)      # [1, freq, 1]
-    bass_mask = bass_mask.view(1, -1, 1)    # [1, freq, 1]
+    sub_bass_mask = sub_bass_mask.view(1, -1, 1)
+    bass_fundamental_mask = bass_fundamental_mask.view(1, -1, 1)
+    bass_harmonic_mask = bass_harmonic_mask.view(1, -1, 1)
+    upper_freq_mask = upper_freq_mask.view(1, -1, 1)
     
-    # Apply frequency-dependent processing with proper broadcasting
-    enhancement = (sub_mask * 1.2 + bass_mask * 1.5)  # Enhance bass more
+    # More conservative enhancement values to prevent distortion
+    enhancement = (sub_bass_mask * 1.2 +  # Reduced from 1.4
+                  bass_fundamental_mask * 1.3 +  # Reduced from 1.5
+                  bass_harmonic_mask * 1.1 +  # Reduced from 1.2
+                  upper_freq_mask * 0.85)  # Increased from 0.7 to retain clarity
     
     spec_mag = spec_mag * enhancement.expand_as(spec_mag)
     
-    # Enhance transients for bass
-    spec_diff = torch.diff(spec_mag, dim=-1, prepend=spec_mag[..., :1])
-    transient_mask = (spec_diff > 0.1 * torch.mean(spec_diff)).float()
-    spec_mag = spec_mag * (1.0 + 0.3 * transient_mask)
+    # Gentler sustain enhancement
+    spec_smooth = torch.mean(spec_mag, dim=-1, keepdim=True)
+    sustain_mask = (spec_mag > 0.8 * spec_smooth).float()
+    spec_mag = spec_mag * (1.0 + 0.1 * sustain_mask)  # Reduced from 0.2
     
     # Reconstruct complex spectrum
     processed_spec = spec_mag * torch.exp(1j * spec_phase)
@@ -74,11 +81,11 @@ def enhance_bass_torch(audio):
     return enhanced
 
 def enhance_bass_final(audio):
-    """Final processing stage with improved bass enhancement."""
-    # Dynamic range compression
-    threshold = 0.5
-    ratio = 0.7
-    makeup_gain = 1.2
+    """Final processing stage with improved bass enhancement and reduced distortion."""
+    # More conservative compression settings
+    threshold = 0.6
+    ratio = 0.85
+    makeup_gain = 1.1
     
     abs_audio = torch.abs(audio)
     gain_reduction = torch.where(
@@ -90,22 +97,42 @@ def enhance_bass_final(audio):
     audio_compressed = torch.sign(audio) * (abs_audio - gain_reduction)
     audio_compressed = audio_compressed * makeup_gain
     
-    # Bass enhancement with proper dimensions
-    audio_diff = torch.diff(audio_compressed, dim=1, prepend=audio_compressed[:, :1])
-    attack_enhancement = torch.sign(audio_diff) * torch.pow(torch.abs(audio_diff), 0.7)
+    # Fix padding for smoother sustain enhancement
+    kernel_size = 882
+    padding = kernel_size // 2
     
-    # Mix enhanced attack with compressed signal
-    audio_final = audio_compressed + 0.2 * attack_enhancement
-    audio_final = torch.tanh(audio_final)
+    # Ensure correct padding by explicitly calculating output size
+    audio_smooth = torch.nn.functional.avg_pool1d(
+        torch.abs(audio_compressed),
+        kernel_size=kernel_size,
+        stride=1,
+        padding=padding,
+        count_include_pad=False
+    )
     
-    # Final limiting and normalization
+    # Trim audio_smooth to match audio_compressed size
+    if audio_smooth.size(-1) > audio_compressed.size(-1):
+        audio_smooth = audio_smooth[..., :audio_compressed.size(-1)]
+    elif audio_smooth.size(-1) < audio_compressed.size(-1):
+        # Pad audio_smooth if it's too short (shouldn't happen with correct padding)
+        pad_size = audio_compressed.size(-1) - audio_smooth.size(-1)
+        audio_smooth = F.pad(audio_smooth, (0, pad_size), mode='replicate')
+    
+    # More conservative sustain enhancement
+    sustain_enhancement = (torch.abs(audio_compressed) / (audio_smooth + 1e-6)).clamp(0.9, 1.1)
+    audio_final = audio_compressed * sustain_enhancement
+    
+    # Soft clipper instead of hard tanh
+    audio_final = torch.sign(audio_final) * (1 - torch.exp(-torch.abs(audio_final)))
+    
+    # More conservative limiting
     max_val = torch.max(torch.abs(audio_final))
-    if max_val > 0.9:
-        audio_final = 0.9 * audio_final / max_val
+    if max_val > 0.85:
+        audio_final = 0.85 * audio_final / max_val
     
     return audio_final
 
-def isolate_bass(model, mixture, segment_size=16384, overlap=0.75, batch_size=1):
+def isolate_source(model, mixture, segment_size=16384, overlap=0.75, batch_size=1):
     """Process audio in segments with enhanced bass clarity."""
     device = next(model.parameters()).device
     model.eval()
@@ -113,17 +140,16 @@ def isolate_bass(model, mixture, segment_size=16384, overlap=0.75, batch_size=1)
     hop_size = int(segment_size * (1 - overlap))
     margin = segment_size // 4
     
-    # High-pass filter for rumble control
-    cutoff_freq = 30
+    # Gentler low-pass filter
+    cutoff_freq = 600  # Increased from 500 for better clarity
     nyquist = 44100 / 2
-    filter_order = 4
+    filter_order = 2  # Reduced from 4 for gentler filtering
     wn = cutoff_freq / nyquist
-    b, a = scipy.signal.butter(filter_order, wn, btype='high')
+    b, a = scipy.signal.butter(filter_order, wn, btype='low')
     
-    # Ensure contiguous memory layout throughout the conversion process
-    mixture_np = mixture.cpu().numpy().copy()  # Ensure it's on CPU and contiguous
+    mixture_np = mixture.cpu().numpy().copy()
     mixture_filtered_np = scipy.signal.filtfilt(b, a, mixture_np, axis=1)
-    mixture_filtered_np = np.ascontiguousarray(mixture_filtered_np)  # Ensure contiguous layout
+    mixture_filtered_np = np.ascontiguousarray(mixture_filtered_np)
     mixture_filtered = torch.from_numpy(mixture_filtered_np).to(mixture.dtype)
     
     pad_left = segment_size - hop_size
@@ -160,7 +186,6 @@ def isolate_bass(model, mixture, segment_size=16384, overlap=0.75, batch_size=1)
         result[:, start_idx:end_idx] += (isolated_segments[i] * window).to(torch.float64)
         normalization[0, start_idx:end_idx] += window.to(torch.float64)
     
-    # Normalize and finalize
     eps = 1e-10
     mask = normalization > eps
     result[:, mask[0]] /= normalization[0, mask[0]]
@@ -171,7 +196,7 @@ def isolate_bass(model, mixture, segment_size=16384, overlap=0.75, batch_size=1)
     result = enhance_bass_final(result)
     
     return result
-
+  
 def load_audio(audio_path, sample_rate=44100):
     """Load and preprocess audio file."""
     waveform, sr = torchaudio.load(audio_path)
@@ -218,7 +243,24 @@ def main():
     print(f"Using device: {device}")
     
     input_path = "mix.wav"
-    output_path = "isolated_bass.wav"  # Changed from drums to bass
+    output_path = "isolated_bass.wav"
     
     print(f"Loading audio file: {input_path}")
-    mixture = load
+    mixture = load_audio(input_path)
+    
+    print("Isolating bass...")
+    isolated_bass = isolate_source(
+        model, 
+        mixture, 
+        segment_size=16384,
+        overlap=0.75
+    )
+    
+    isolated_bass = isolated_bass.to(dtype=torch.float32)
+    
+    print(f"Saving result to: {output_path}")
+    torchaudio.save(output_path, isolated_bass, 44100)
+    print("Done!")
+
+if __name__ == "__main__":
+    main()
