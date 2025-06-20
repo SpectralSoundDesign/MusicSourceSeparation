@@ -1,0 +1,180 @@
+{
+  "waveunet": {
+    "tracks": [
+      {
+        "track_name": "AM Contra - Heart Peripheral",
+        "metrics": {
+          "SDR": 0.8147940635681152,
+          "SI-SDR": -5.051680088043213,
+          "SNR": 0.8147940635681152
+        }
+      },
+      {
+        "track_name": "Al James - Schoolboy Facination",
+        "metrics": {
+          "SDR": 3.0862693786621094,
+          "SI-SDR": 0.43291908502578735,
+          "SNR": 3.0862693786621094
+        }
+      },
+      {
+        "track_name": "Angels In Amplifiers - I'm Alright",
+        "metrics": {
+          "SDR": 2.8986477851867676,
+          "SI-SDR": -0.18499107658863068,
+          "SNR": 2.8986477851867676
+        }
+      },
+      {
+        "track_name": "Arise - Run Run Run",
+        "metrics": {
+          "SDR": 3.353740930557251,
+          "SI-SDR": 0.7546862363815308,
+          "SNR": 3.353740930557251
+        }
+      },
+      {
+        "track_name": "BKS - Bulldozer",
+        "metrics": {
+          "SDR": 2.3602819442749023,
+          "SI-SDR": -1.214203119277954,
+          "SNR": 2.3602819442749023
+        }
+      },
+      {
+        "track_name": "BKS - Too Much",
+        "metrics": {
+          "SDR": 3.322662115097046,
+          "SI-SDR": 1.9437092542648315,
+          "SNR": 3.322662115097046
+        }
+      },
+      {
+        "track_name": "Ben Carrigan - We'll Talk About It All Tonight",
+        "metrics": {
+          "SDR": 4.154131889343262,
+          "SI-SDR": 2.0483765602111816,
+          "SNR": 4.154131889343262
+        }
+      },
+      {
+        "track_name": "Bobby Nobody - Stitch Up",
+        "metrics": {
+          "SDR": 3.5922834873199463,
+          "SI-SDR": 1.095888614654541,
+          "SNR": 3.5922834873199463
+        }
+      },
+      {
+        "track_name": "Buitraker - Revo X",
+        "metrics": {
+          "SDR": 1.8209505081176758,
+          "SI-SDR": -1.6055500507354736,
+          "SNR": 1.8209505081176758
+        }
+      },
+      {
+        "track_name": "Carlos Gonzalez - A Place For Us",
+        "metrics": {
+          "SDR": -2.0476691722869873,
+          "SI-SDR": -6.710274696350098,
+          "SNR": -2.0476691722869873
+        }
+      }
+    ],
+    "average": {
+      "SDR": 2.335609292984009,
+      "SI-SDR": -0.8491119280457496,
+      "SNR": 2.335609292984009
+    }
+  },
+  "demucs": {
+    "tracks": [
+      {
+        "track_name": "AM Contra - Heart Peripheral",
+        "metrics": {
+          "SDR": 1.2938231229782104,
+          "SI-SDR": -3.055793285369873,
+          "SNR": 1.2938231229782104
+        }
+      },
+      {
+        "track_name": "Al James - Schoolboy Facination",
+        "metrics": {
+          "SDR": 2.695896625518799,
+          "SI-SDR": 9.795161247253418,
+          "SNR": 2.695896625518799
+        }
+      },
+      {
+        "track_name": "Angels In Amplifiers - I'm Alright",
+        "metrics": {
+          "SDR": 2.5346641540527344,
+          "SI-SDR": 10.02393627166748,
+          "SNR": 2.5346641540527344
+        }
+      },
+      {
+        "track_name": "Arise - Run Run Run",
+        "metrics": {
+          "SDR": 2.7480721473693848,
+          "SI-SDR": 6.998236656188965,
+          "SNR": 2.7480721473693848
+        }
+      },
+      {
+        "track_name": "BKS - Bulldozer",
+        "metrics": {
+          "SDR": 3.9248342514038086,
+          "SI-SDR": 9.3965482711792,
+          "SNR": 3.9248342514038086
+        }
+      },
+      {
+        "track_name": "BKS - Too Much",
+        "metrics": {
+          "SDR": 1.8205715417861938,
+          "SI-SDR": 13.18106460571289,
+          "SNR": 1.8205715417861938
+        }
+      },
+      {
+        "track_name": "Ben Carrigan - We'll Talk About It All Tonight",
+        "metrics": {
+          "SDR": 3.3044257164001465,
+          "SI-SDR": 13.171954154968262,
+          "SNR": 3.3044257164001465
+        }
+      },
+      {
+        "track_name": "Bobby Nobody - Stitch Up",
+        "metrics": {
+          "SDR": 2.6271045207977295,
+          "SI-SDR": 8.129426956176758,
+          "SNR": 2.6271045207977295
+        }
+      },
+      {
+        "track_name": "Buitraker - Revo X",
+        "metrics": {
+          "SDR": 3.1523444652557373,
+          "SI-SDR": 10.961099624633789,
+          "SNR": 3.1523444652557373
+        }
+      },
+      {
+        "track_name": "Carlos Gonzalez - A Place For Us",
+        "metrics": {
+          "SDR": 1.7278649806976318,
+          "SI-SDR": 0.7718887329101562,
+          "SNR": 1.7278649806976318
+        }
+      }
+    ],
+    "average": {
+      "SDR": 2.5829601526260375,
+      "SI-SDR": 7.937352323532105,
+      "SNR": 2.5829601526260375
+    }
+  }
+}
